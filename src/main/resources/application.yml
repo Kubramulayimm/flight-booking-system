@@ -1,5 +1,13 @@
 server:
   port: 8080
+iyzico:
+  base-url: https://sandbox-api.iyzipay.com
+  api-key: sandbox-ntIW6DAZcGJXr2m95MESugMMMtm0B9Xb
+  secret-key: sandbox-4tKGYecjVIS9318WYJICaFng85OehS4E
+  locale: tr
+  currency: TRY
+  uri:
+    payment-auth: /payment/auth
 spring:
   datasource:
     url: jdbc:h2:file:./data/demo

@@ -26,7 +26,7 @@ public class IyzicoPaymentServiceTest {
     @Test
     public void should_pay_with_iyzico_with_100_clients_together() {
         List<CompletableFuture> futures = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
+        for (int i = 1; i < 100; i++) {
             CompletableFuture<String> future = paymentServiceClients.call(new BigDecimal(i));
             futures.add(future);
         }

@@ -1,5 +1,8 @@
-package com.iyzico.challenge.service;
+package com.iyzico.challenge.dto;
 
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
 public class BankPaymentResponse {
 
     private String resultCode;

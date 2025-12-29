@@ -9,7 +9,7 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class PaymentServiceClients {
 
-    private IyzicoPaymentService iyzicoPaymentService;
+    private final IyzicoPaymentService iyzicoPaymentService;
 
     public PaymentServiceClients(IyzicoPaymentService iyzicoPaymentService) {
         this.iyzicoPaymentService = iyzicoPaymentService;
