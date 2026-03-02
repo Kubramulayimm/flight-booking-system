@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IyzicoNon3dsClient.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">flight-booking-system</a> &gt; <a href="index.source.html" class="el_package">com.iyzico.challenge.iyzico</a> &gt; <span class="el_source">IyzicoNon3dsClient.java</span></div><h1>IyzicoNon3dsClient.java</h1><pre class="source lang-java linenums">package com.iyzico.challenge.iyzico;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iyzico.challenge.iyzico.dto.IyzicoCreatePaymentRequest;
+import com.iyzico.challenge.iyzico.dto.IyzicoCreatePaymentResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Collections;
+
+@Component
+<span class="fc" id="L17">@RequiredArgsConstructor</span>
+public class IyzicoNon3dsClient {
+
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
+    private final IyzicoAuthHelper authHelper;
+
+    @Value(&quot;${iyzico.base-url}&quot;)
+    private String baseUrl;
+
+    @Value(&quot;${iyzico.api-key}&quot;)
+    private String apiKey;
+
+    @Value(&quot;${iyzico.secret-key}&quot;)
+    private String secretKey;
+
+    @Value(&quot;${iyzico.uri.payment-auth}&quot;)
+    private String paymentAuthPath;
+
+    @Value(&quot;${iyzico.locale:tr}&quot;)
+    private String locale;
+
+    @Value(&quot;${iyzico.currency:TRY}&quot;)
+    private String currency;
+
+    private static final String CITY_ISTANBUL = &quot;Istanbul&quot;;
+
+    public IyzicoCreatePaymentResponse createPayment(BigDecimal price) {
+        try {
+<span class="fc" id="L46">            String randomKey = String.valueOf(System.currentTimeMillis());</span>
+
+<span class="fc" id="L48">            IyzicoCreatePaymentRequest req = buildDummyRequest(price);</span>
+
+<span class="fc" id="L50">            String bodyJson = objectMapper.writeValueAsString(req);</span>
+
+<span class="fc" id="L52">            HttpHeaders headers = new HttpHeaders();</span>
+<span class="fc" id="L53">            headers.setContentType(MediaType.APPLICATION_JSON);</span>
+<span class="fc" id="L54">            headers.set(&quot;x-iyzi-rnd&quot;, randomKey);</span>
+<span class="fc" id="L55">            headers.set(&quot;Authorization&quot;, authHelper.buildAuthorizationHeader(apiKey, secretKey, randomKey, paymentAuthPath, bodyJson));</span>
+<span class="fc" id="L56">            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));</span>
+
+<span class="fc" id="L58">            HttpEntity&lt;String&gt; entity = new HttpEntity&lt;&gt;(bodyJson, headers);</span>
+
+<span class="fc" id="L60">            ResponseEntity&lt;IyzicoCreatePaymentResponse&gt; resp = restTemplate.exchange(</span>
+                    baseUrl + paymentAuthPath,
+                    HttpMethod.POST,
+                    entity,
+                    IyzicoCreatePaymentResponse.class
+            );
+
+<span class="fc" id="L67">            return resp.getBody();</span>
+<span class="fc" id="L68">        } catch (Exception e) {</span>
+<span class="fc" id="L69">            throw new IllegalStateException(&quot;iyzico createPayment failed&quot;, e);</span>
+        }
+    }
+
+    private IyzicoCreatePaymentRequest buildDummyRequest(BigDecimal amount) {
+<span class="fc" id="L74">        String a = amount.setScale(2, RoundingMode.HALF_UP).toPlainString();</span>
+
+<span class="fc" id="L76">        IyzicoCreatePaymentRequest.PaymentCard card = IyzicoCreatePaymentRequest.PaymentCard.builder()</span>
+<span class="fc" id="L77">                .cardHolderName(&quot;John Doe&quot;)</span>
+<span class="fc" id="L78">                .cardNumber(&quot;5526080000000006&quot;)</span>
+<span class="fc" id="L79">                .expireMonth(&quot;12&quot;)</span>
+<span class="fc" id="L80">                .expireYear(&quot;2030&quot;)</span>
+<span class="fc" id="L81">                .cvc(&quot;123&quot;)</span>
+<span class="fc" id="L82">                .registerCard(0)</span>
+<span class="fc" id="L83">                .build();</span>
+
+<span class="fc" id="L85">        IyzicoCreatePaymentRequest.Buyer buyer = IyzicoCreatePaymentRequest.Buyer.builder()</span>
+<span class="fc" id="L86">                .id(&quot;BY789&quot;)</span>
+<span class="fc" id="L87">                .name(&quot;John&quot;)</span>
+<span class="fc" id="L88">                .surname(&quot;Doe&quot;)</span>
+<span class="fc" id="L89">                .gsmNumber(&quot;+905350000000&quot;)</span>
+<span class="fc" id="L90">                .email(&quot;john.doe@example.com&quot;)</span>
+<span class="fc" id="L91">                .identityNumber(&quot;74300864791&quot;)</span>
+<span class="fc" id="L92">                .registrationAddress(CITY_ISTANBUL)</span>
+<span class="fc" id="L93">                .city(CITY_ISTANBUL)</span>
+<span class="fc" id="L94">                .country(&quot;Turkey&quot;)</span>
+<span class="fc" id="L95">                .ip(&quot;85.34.78.112&quot;)</span>
+<span class="fc" id="L96">                .build();</span>
+
+<span class="fc" id="L98">        IyzicoCreatePaymentRequest.Address billing = IyzicoCreatePaymentRequest.Address.builder()</span>
+<span class="fc" id="L99">                .contactName(&quot;John Doe&quot;)</span>
+<span class="fc" id="L100">                .city(CITY_ISTANBUL)</span>
+<span class="fc" id="L101">                .country(&quot;Turkey&quot;)</span>
+<span class="fc" id="L102">                .addressLine(&quot;Some address&quot;)</span>
+<span class="fc" id="L103">                .build();</span>
+
+<span class="fc" id="L105">        IyzicoCreatePaymentRequest.BasketItem item = IyzicoCreatePaymentRequest.BasketItem.builder()</span>
+<span class="fc" id="L106">                .id(&quot;BI101&quot;)</span>
+<span class="fc" id="L107">                .name(&quot;Seat Purchase&quot;)</span>
+<span class="fc" id="L108">                .category1(&quot;Flight&quot;)</span>
+<span class="fc" id="L109">                .itemType(&quot;VIRTUAL&quot;)</span>
+<span class="fc" id="L110">                .price(a)</span>
+<span class="fc" id="L111">                .build();</span>
+
+<span class="fc" id="L113">        return IyzicoCreatePaymentRequest.builder()</span>
+<span class="fc" id="L114">                .locale(locale)</span>
+<span class="fc" id="L115">                .conversationId(&quot;conv-&quot; + System.currentTimeMillis())</span>
+<span class="fc" id="L116">                .price(a)</span>
+<span class="fc" id="L117">                .paidPrice(a)</span>
+<span class="fc" id="L118">                .currency(currency)</span>
+<span class="fc" id="L119">                .installment(1)</span>
+<span class="fc" id="L120">                .basketId(&quot;B&quot; + System.currentTimeMillis())</span>
+<span class="fc" id="L121">                .paymentChannel(&quot;WEB&quot;)</span>
+<span class="fc" id="L122">                .paymentGroup(&quot;PRODUCT&quot;)</span>
+<span class="fc" id="L123">                .paymentCard(card)</span>
+<span class="fc" id="L124">                .buyer(buyer)</span>
+<span class="fc" id="L125">                .billingAddress(billing)</span>
+<span class="fc" id="L126">                .basketItems(Collections.singletonList(item))</span>
+<span class="fc" id="L127">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

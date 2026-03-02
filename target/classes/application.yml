@@ -1,0 +1,35 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+iyzico:
+  base-url: ${IYZICO_BASE_URL:https://sandbox-api.iyzipay.com}
+  api-key: ${IYZICO_API_KEY:}
+  secret-key: ${IYZICO_SECRET_KEY:}
+  locale: ${IYZICO_LOCALE:tr}
+  currency: ${IYZICO_CURRENCY:TRY}
+  uri:
+    payment-auth: ${IYZICO_PAYMENT_AUTH_URI:/payment/auth}
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:file:~/flight-booking-system;AUTO_SERVER=true}
+    driverClassName: ${DB_DRIVER:org.h2.Driver}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:sa}
+  jpa:
+    show-sql: ${JPA_SHOW_SQL:true}
+    open-in-view: false
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL_AUTO:create-drop}
+    properties:
+      hibernate:
+        use-new-id-generator-mappings: false
+
+  h2:
+    console:
+      enabled: ${H2_CONSOLE_ENABLED:true}
+      path: ${H2_CONSOLE_PATH:/h2-console}
+      settings:
+        trace: false
+        web-allow-others: false

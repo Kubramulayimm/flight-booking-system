@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Seat.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">flight-booking-system</a> &gt; <a href="index.source.html" class="el_package">com.iyzico.challenge.entity</a> &gt; <span class="el_source">Seat.java</span></div><h1>Seat.java</h1><pre class="source lang-java linenums">package com.iyzico.challenge.entity;
+
+import com.iyzico.challenge.enums.SeatStatus;
+import lombok.*;
+
+import javax.persistence.*;
+import java.math.BigDecimal;
+
+@Entity
+<span class="pc" id="L10">@Getter @Setter</span>
+<span class="fc" id="L11">@NoArgsConstructor @AllArgsConstructor</span>
+<span class="pc" id="L12">@Builder</span>
+@Table(name = &quot;seats&quot;,
+        uniqueConstraints = {
+                @UniqueConstraint(name = &quot;uq_flight_seat_no&quot;, columnNames = {&quot;flight_id&quot;, &quot;seat_no&quot;})
+        },
+        indexes = {
+                @Index(name = &quot;idx_seat_flight&quot;, columnList = &quot;flight_id&quot;),
+                @Index(name = &quot;idx_seat_status_deleted&quot;, columnList = &quot;status,deleted&quot;)
+        }
+)
+public class Seat extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="fc" id="L26">    private Long id;</span>
+
+    @Column(name=&quot;seat_no&quot;, nullable = false, length = 10)
+<span class="fc" id="L29">    private String seatNo;</span>
+
+    @Column(nullable = false, precision = 19, scale = 2)
+<span class="fc" id="L32">    private BigDecimal price;</span>
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+<span class="fc" id="L36">    private SeatStatus status;</span>
+
+    @Version
+<span class="fc" id="L39">    private Long version;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name=&quot;flight_id&quot;, nullable = false)
+<span class="fc" id="L43">    private Flight flight;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

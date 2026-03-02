@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeatPurchaseServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">flight-booking-system</a> &gt; <a href="index.source.html" class="el_package">com.iyzico.challenge.service.impl</a> &gt; <span class="el_source">SeatPurchaseServiceImpl.java</span></div><h1>SeatPurchaseServiceImpl.java</h1><pre class="source lang-java linenums">package com.iyzico.challenge.service.impl;
+
+import com.iyzico.challenge.dto.SeatPurchaseRequest;
+import com.iyzico.challenge.dto.SeatPurchaseResponse;
+import com.iyzico.challenge.entity.Payment;
+import com.iyzico.challenge.entity.Seat;
+import com.iyzico.challenge.enums.SeatStatus;
+import com.iyzico.challenge.exception.BusinessException;
+import com.iyzico.challenge.exception.NotFoundException;
+import com.iyzico.challenge.exception.SeatNotAvailableException;
+import com.iyzico.challenge.repository.PaymentRepository;
+import com.iyzico.challenge.repository.SeatRepository;
+import com.iyzico.challenge.service.PaymentServiceClients;
+import com.iyzico.challenge.service.SeatPurchaseService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+
+@Service
+<span class="fc" id="L22">@RequiredArgsConstructor</span>
+public class SeatPurchaseServiceImpl implements SeatPurchaseService {
+
+    private final SeatRepository seatRepository;
+    private final PaymentRepository paymentRepository;
+    private final PaymentServiceClients paymentServiceClients;
+
+    @Override
+    @Transactional
+    public SeatPurchaseResponse purchase(Long flightId, Long seatId, SeatPurchaseRequest req) {
+
+<span class="fc" id="L33">        Seat reservedSeat = reserveSeatOrFail(flightId, seatId, req);</span>
+
+<span class="fc" id="L35">        BigDecimal finalPrice = reservedSeat.getPrice();</span>
+
+        try {
+<span class="fc" id="L38">            paymentServiceClients.call(finalPrice).join();</span>
+<span class="fc" id="L39">        } catch (Exception e) {</span>
+<span class="fc" id="L40">            releaseSeat(flightId, seatId);</span>
+<span class="fc" id="L41">            throw new BusinessException(&quot;Payment failed: &quot; + safeMessage(e));</span>
+<span class="fc" id="L42">        }</span>
+
+<span class="fc" id="L44">        Payment payment = finalizeSaleAndPersistPayment(flightId, seatId, finalPrice);</span>
+
+<span class="fc" id="L46">        return SeatPurchaseResponse.builder()</span>
+<span class="fc" id="L47">                .paymentId(payment.getId())</span>
+<span class="fc" id="L48">                .flightId(flightId)</span>
+<span class="fc" id="L49">                .seatId(seatId)</span>
+<span class="fc" id="L50">                .seatNo(reservedSeat.getSeatNo())</span>
+<span class="fc" id="L51">                .price(finalPrice)</span>
+<span class="fc" id="L52">                .passengerName(req.getPassengerName())</span>
+<span class="fc" id="L53">                .status(&quot;COMPLETED&quot;)</span>
+<span class="fc" id="L54">                .createdAt(new java.util.Date())</span>
+<span class="fc" id="L55">                .build();</span>
+    }
+
+    @Transactional
+    public Seat reserveSeatOrFail(Long flightId, Long seatId, SeatPurchaseRequest req) {
+<span class="fc" id="L60">        Seat seat = seatRepository.findByFlightIdForUpdate(flightId, seatId)</span>
+<span class="fc" id="L61">                .orElseThrow(() -&gt; new NotFoundException(&quot;Seat not found: seatId=&quot; + seatId + &quot;, flightId=&quot; + flightId));</span>
+
+<span class="fc bfc" id="L63" title="All 2 branches covered.">        if (seat.getStatus() == SeatStatus.SOLD) {</span>
+<span class="fc" id="L64">            throw new SeatNotAvailableException(&quot;Seat already sold. seatId=&quot; + seatId);</span>
+        }
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        if (seat.getStatus() == SeatStatus.RESERVED) {</span>
+<span class="fc" id="L67">            throw new SeatNotAvailableException(&quot;Seat is being purchased by another passenger. seatId=&quot; + seatId);</span>
+        }
+
+<span class="fc" id="L70">        BigDecimal seatPrice = seat.getPrice();</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (seatPrice == null) {</span>
+<span class="fc" id="L72">            throw new BusinessException(&quot;Seat price is missing. seatId=&quot; + seatId);</span>
+        }
+
+<span class="fc bfc" id="L75" title="All 4 branches covered.">        if (req.getPrice() != null &amp;&amp; seatPrice.compareTo(req.getPrice()) != 0) {</span>
+<span class="fc" id="L76">            throw new BusinessException(&quot;Price mismatch. Expected=&quot; + seatPrice + &quot;, Given=&quot; + req.getPrice());</span>
+        }
+
+<span class="fc" id="L79">        seat.setStatus(SeatStatus.RESERVED);</span>
+<span class="fc" id="L80">        return seatRepository.save(seat);</span>
+    }
+
+    @Transactional
+    public void releaseSeat(Long flightId, Long seatId) {
+<span class="fc" id="L85">        Seat seat = seatRepository.findByFlightIdForUpdate(flightId, seatId)</span>
+<span class="fc" id="L86">                .orElseThrow(() -&gt; new NotFoundException(&quot;Seat not found: seatId=&quot; + seatId + &quot;, flightId=&quot; + flightId));</span>
+
+<span class="fc bfc" id="L88" title="All 2 branches covered.">        if (seat.getStatus() == SeatStatus.RESERVED) {</span>
+<span class="fc" id="L89">            seat.setStatus(SeatStatus.AVAILABLE);</span>
+<span class="fc" id="L90">            seatRepository.save(seat);</span>
+        }
+<span class="fc" id="L92">    }</span>
+
+    @Transactional
+    public Payment finalizeSaleAndPersistPayment(Long flightId, Long seatId, BigDecimal price) {
+<span class="fc" id="L96">        Seat seat = seatRepository.findByFlightIdForUpdate(flightId, seatId)</span>
+<span class="fc" id="L97">                .orElseThrow(() -&gt; new NotFoundException(&quot;Seat not found: seatId=&quot; + seatId + &quot;, flightId=&quot; + flightId));</span>
+
+<span class="fc bfc" id="L99" title="All 2 branches covered.">        if (seat.getStatus() != SeatStatus.RESERVED) {</span>
+<span class="fc" id="L100">            throw new SeatNotAvailableException(&quot;Seat cannot be finalized. Current status=&quot; + seat.getStatus());</span>
+        }
+
+<span class="fc" id="L103">        seat.setStatus(SeatStatus.SOLD);</span>
+<span class="fc" id="L104">        seatRepository.save(seat);</span>
+
+<span class="fc" id="L106">        Payment payment = Payment.builder()</span>
+<span class="fc" id="L107">                .price(price)</span>
+<span class="fc" id="L108">                .bankResponse(&quot;200&quot;)</span>
+<span class="fc" id="L109">                .build();</span>
+
+<span class="fc" id="L111">        return paymentRepository.save(payment);</span>
+    }
+
+    private String safeMessage(Exception e) {
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        return (e.getCause() != null ? e.getCause().getMessage() : e.getMessage());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

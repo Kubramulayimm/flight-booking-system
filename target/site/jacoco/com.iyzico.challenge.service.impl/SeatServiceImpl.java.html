@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeatServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">flight-booking-system</a> &gt; <a href="index.source.html" class="el_package">com.iyzico.challenge.service.impl</a> &gt; <span class="el_source">SeatServiceImpl.java</span></div><h1>SeatServiceImpl.java</h1><pre class="source lang-java linenums">package com.iyzico.challenge.service.impl;
+
+import com.iyzico.challenge.dto.SeatRequest;
+import com.iyzico.challenge.dto.SeatResponse;
+import com.iyzico.challenge.entity.Flight;
+import com.iyzico.challenge.entity.Seat;
+import com.iyzico.challenge.enums.SeatStatus;
+import com.iyzico.challenge.exception.BusinessException;
+import com.iyzico.challenge.exception.NotFoundException;
+import com.iyzico.challenge.mapper.SeatMapper;
+import com.iyzico.challenge.repository.FlightRepository;
+import com.iyzico.challenge.repository.SeatRepository;
+import com.iyzico.challenge.service.SeatService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+<span class="fc" id="L19">@RequiredArgsConstructor</span>
+public class SeatServiceImpl implements SeatService {
+
+    private final FlightRepository flightRepository;
+    private final SeatRepository seatRepository;
+    private final SeatMapper seatMapper;
+
+    @Transactional
+    public SeatResponse addSeat(Long flightId, SeatRequest req) {
+<span class="fc" id="L28">        Flight flight = flightRepository.findByIdAndDeletedFalse(flightId)</span>
+<span class="fc" id="L29">                .orElseThrow(() -&gt; new NotFoundException(&quot;Flight not found: &quot; + flightId));</span>
+
+<span class="fc bfc" id="L31" title="All 2 branches covered.">        if (seatRepository.existsByFlightIdAndSeatNoAndDeletedFalse(flightId, req.getSeatNo())) {</span>
+<span class="fc" id="L32">            throw new BusinessException(&quot;Seat already exists for this flight. seatNo=&quot; + req.getSeatNo());</span>
+        }
+
+<span class="fc" id="L35">        Seat seat = Seat.builder()</span>
+<span class="fc" id="L36">                .flight(flight)</span>
+<span class="fc" id="L37">                .seatNo(req.getSeatNo())</span>
+<span class="fc" id="L38">                .price(req.getPrice())</span>
+<span class="fc" id="L39">                .status(SeatStatus.AVAILABLE)</span>
+<span class="fc" id="L40">                .build();</span>
+
+<span class="fc" id="L42">        Seat seatSave = seatRepository.save(seat);</span>
+<span class="fc" id="L43">        return seatMapper.toSeatResponse(seatSave);</span>
+
+    }
+
+    @Transactional
+    public SeatResponse updateSeat(Long flightId, Long seatId, SeatRequest req) {
+<span class="fc" id="L49">        Seat seat = seatRepository.findByIdAndFlightIdAndDeletedFalse(seatId, flightId)</span>
+<span class="fc" id="L50">                .orElseThrow(() -&gt; new NotFoundException(&quot;Seat not found. seatId=&quot; + seatId + &quot;, flightId=&quot; + flightId));</span>
+
+<span class="fc" id="L52">        validateSeatUpdatable(seat);</span>
+
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">        if (!seat.getSeatNo().equals(req.getSeatNo())</span>
+<span class="fc bfc" id="L55" title="All 2 branches covered.">                &amp;&amp; seatRepository.existsByFlightIdAndSeatNoAndDeletedFalse(flightId, req.getSeatNo())) {</span>
+<span class="fc" id="L56">            throw new BusinessException(&quot;Seat already exists for this flight. seatNo=&quot; + req.getSeatNo());</span>
+        }
+
+<span class="fc" id="L59">        seat.setSeatNo(req.getSeatNo());</span>
+<span class="fc" id="L60">        seat.setPrice(req.getPrice());</span>
+<span class="fc" id="L61">        Seat seatUpdate = seatRepository.save(seat);</span>
+<span class="fc" id="L62">        return seatMapper.toSeatResponse(seatUpdate);</span>
+    }
+
+    @Transactional
+    public void deleteSeat(Long flightId, Long seatId) {
+<span class="fc" id="L67">        Seat seat = seatRepository.findByIdAndFlightIdAndDeletedFalse(seatId, flightId)</span>
+<span class="fc" id="L68">                .orElseThrow(() -&gt; new NotFoundException(&quot;Seat not found. seatId=&quot; + seatId + &quot;, flightId=&quot; + flightId));</span>
+
+<span class="fc" id="L70">        seat.softDelete();</span>
+<span class="fc" id="L71">        seatRepository.save(seat);</span>
+<span class="fc" id="L72">    }</span>
+
+    private void validateSeatUpdatable(Seat seat) {
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (seat.getStatus() == SeatStatus.SOLD) {</span>
+<span class="fc" id="L76">            throw new BusinessException(&quot;Sold seat cannot be modified&quot;);</span>
+        }
+<span class="fc" id="L78">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
